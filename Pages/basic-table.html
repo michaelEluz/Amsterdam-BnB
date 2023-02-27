@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+
+    <title>Chillax Yourself - Your next break</title>
+    <link rel="icon" href="./img/logo.jpg">
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+    <script src="../Scripts/jquery-3.4.1.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.19/css/dataTables.bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/responsive/2.2.3/css/responsive.dataTables.min.css">
+    <script src="../Scripts/ajaxCalls.js"></script>
+    <script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.min.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/responsive/2.2.3/js/dataTables.responsive.min.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/1.10.19/js/dataTables.bootstrap.min.js"></script>
+    <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+    <link href="css/tableStyle.css" rel="stylesheet" />
+    <script src="JavaScript.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.bundle.min.js"></script>
+    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <link rel="stylesheet" type="text/css" href="style.css">
+
+    <style>
+        img {
+            width: 80px;
+            height: 80px;
+        }
+    </style>
+    <link href="chatStyle.css" rel="stylesheet" />
+    <script src="chat_app.js"></script>
+    <script>
+        var imgUrl = "empty";
+        const reader = new FileReader();
+
+        // will run when the document is ready
+        $(document).ready(function () {
+            $("#dataTables").slideUp();
+            $("#chatDiv").slideUp();
+            ajaxCall("GET", "../api/Users", "", scbGetUsers, ecbGetUsers);
+            ajaxCall("GET", "../api/Apartments/admin", "", scbGetApartments, ecbGetApartments);
+            ajaxCall("GET", "../api/Hosts/admin", "", scbGetHosts, ecbGetHosts);
+            users = "";
+            mode = "";
+            $("#showDT").click(show_dt);
+            $("#showC").click(show_chat);
+            $("#search").on('input', function (e) {
+                filtered = all_users.filter(function (user) { return user.UserName.indexOf($("#search").val()) !== -1 });
+                $("#users_list").empty();
+                for (let user in filtered) {
+                    add_to_list(filtered[user]);
+                }
+            });
+
+        });
+
+        function show_dt() {
+            $("#dataTables").slideDown();
+            $("#chatDiv").slideUp();
+        }
+        function show_chat() {
+            $("#dataTables").slideUp();
+            $("#chatDiv").slideDown();
+        }
+        function scbGetApartments(apartments) {
+            apartmentsData = apartments;
+            try {
+                tbl = $('#ApartmentTable').DataTable({
+                    data: apartmentsData,
+                    pageLength: 5,
+                    columns: [
+                        {
+                            data: "Id"
+                        },
+                        { data: "Name" },
+                        {
+                            data: "Total_cacellations"
+                        },
+                        {
+                            data: "Total_rented_days"
+                        }
+                    ],
+
+                });
+
+            }
+            catch (err) {
+                alert(err);
+            }
+        }
+        function fixStrings(str) {
+            new_str = str.split("T");
+            return new_str[0];
+        }
+
+        function scbGetHosts(hosts) {
+            for (i in hosts) {
+                hosts[i].Host_since = fixStrings(hosts[i].Host_since);
+            }
+            hostsData = hosts;
+            try {
+                tbl = $('#HostTable').DataTable({
+                    data: hostsData,
+                    pageLength: 5,
+                    columns: [
+                        {
+                            data: "Host_picture_url", render: function (data, type, row, meta) {
+                                return '<img src="' + data + '" height="30" width="30"/>'
+                            }
+                        },
+                        { data: "Host_Id" },
+                        {
+                            data: "Host_name"
+                        },
+                        {
+                            data: "Host_since"
+                        },
+                        {
+                            data: "Host_total_cancellations"
+                        },
+                        {
+                            data: "Host_income"
+                        },
+                        {
+                            data: "Host_listings_count"
+                        }
+                    ],
+
+                });
+
+            }
+            catch (err) {
+                alert(err);
+            }
+
+
+        }
+
+
+        function ecbGetHosts(status) {
+            console.log(status);
+        }
+
+
+        function ecbGetApartments(status) {
+            console.log(status);
+        }
+
+        function scbGetUsers(Users) {
+            console.log(Users)
+
+        }
+
+
+        function ecbGetUsers(status) {
+            console.log(status);
+        }
+
+
+
+
+
+        // this function is activated in case of a success
+        function scbGetUsers(UsersData) {
+            for (i in UsersData) {
+                UsersData[i].Sign_up_date = fixStrings(UsersData[i].Sign_up_date);
+            }
+            users = UsersData;
+
+            try {
+                tbl = $('#UsersTable').DataTable({
+                    data: users,
+                    pageLength: 5,
+                    columns: [
+                        { data: "Email" },
+                        { data: "UserName" },
+                        {
+                            data: "Sign_up_date"
+                        },
+                        {
+                            data: "Total_reservations"
+                        },
+                        {
+                            data: "Total_income"
+                        },
+                        {
+                            data: "Total_cancellations"
+                        }
+                    ],
+
+                });
+
+            }
+            catch (err) {
+                alert(err);
+            }
+
+
+        }
+
+        // this function is activated in case of a failure
+        function error(err) {
+            swal("Error: " + err);
+        }
+
+    </script>
+
+</head>
+<body style="background-color:white">
+    <!--<div id="preloader">
+        <div class="loader"></div>
+    </div>-->
+    <header class="header-area">
+        <!-- Top Header Area Start -->
+        <div class="top-header-area">
+            <div class="container">
+                <div class="row">
+
+                    <div class="col-8">
+                        <div class="top-header-content">
+                            <a href="#"><i class="icon_phone"></i> <span>052-5539426</span></a>
+                            <a href="#"><i class="icon_mail"></i> <span>mikieluz@gmail.com</span></a>
+                            <a href="#" id="user_pos"><span>Admin Mode</span></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Top Header Area End -->
+        <!-- Main Header Start -->
+        <div id="navbar" class="main-header-area">
+            <div class="classy-nav-container breakpoint-off">
+                <div class="container">
+                    <!-- Classy Menu -->
+                    <nav class="classy-navbar justify-content-between" id="robertoNav">
+
+                        <!-- Logo -->
+                        <a class="logo" href="index.html"><img src="img/logo.jpg" style="height:75px;width:110px; border-radius:20px ;margin-top:12px;" /></a>
+
+                        <div class="classy-menu">
+                            <!-- Menu Close Button -->
+                            <!-- Nav Start -->
+                            <div class="classynav" style="float:left">
+                                <ul id="nav">
+                                    <li class="active"><a style="color: #1cc3b2" href="./chat_app.html">Admin Mode</a></li>
+                                    <li class="active"><a href="./index.html">Home</a></li>
+                                    <li id="apartmentsPages">
+                                        <a href="./apartments.html">Apartments</a>
+                                        <ul class="dropdown">
+                                            <li><a href="./cart.html">- My Resarvations</a></li>
+                                            <li><a href="./Favorites.html">-My Favorites</a></li>
+                                        </ul>
+                                    </li>
+                                    <li><a href="./map.html">Map</a></li>
+                                    <li><a href="./about.html">About Us</a></li>
+
+                                </ul>
+
+
+                            </div>
+                            <!-- Nav End -->
+                        </div>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </header>
+    <div class="breadcrumb-area bg-img bg-overlay jarallax" style="background-image: url(img/bg-img/57.jpg);">
+        <div class="container h-100">
+            <div class="row h-100 align-items-center">
+                <div class="col-12">
+                    <div class="breadcrumb-content text-center">
+                        <h2 class="page-title">Admin Data Control</h2>
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb justify-content-center">
+                                <li class="breadcrumb-item"><a href="index.html">Home</a></li>
+                                <li class="breadcrumb-item active" aria-current="page">Apartments</li>
+                            </ol>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div style="margin:auto; text-align:center" class="row">
+        <!-- Single Post Area -->
+        <div class="col-12 col-md-6 col-lg-3" style="background-color: azure; height: 150px"></div>
+        <div id="showDT" class="col-12 col-md-6 col-lg-3" style="background-color: azure; height: 150px">
+            <div class="single-post-area mb-100 wow fadeInUp" data-wow-delay="300ms">
+                <a class="post-thumbnail"><img src="https://www.seekpng.com/png/detail/229-2294108_customer-data-management-icon.png" alt=""></a>
+
+                <!-- Post Title -->
+                <a class="post-title">Data Tables</a>
+
+            </div>
+        </div>
+        <!--<div class="col-12 col-md-6 col-lg-6"></div>-->
+        <!-- Single Post Area -->
+        <div id="showC" class="col-12 col-md-6 col-lg-3" style="background-color:azure;height:150px">
+            <div class="single-post-area mb-100 wow fadeInUp" data-wow-delay="500ms">
+                <a class="post-thumbnail"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQxB3uL_BisAkkKCsYMvzrJa06LwuX5WWs2Ng&usqp=CAU" alt=""></a>
+
+                <a class="post-title">Admin Chat</a>
+
+            </div>
+        </div>
+        <div class="col-12 col-md-6 col-lg-3" style="background-color: azure; height: 150px"></div>
+    </div>
+    <br />
+    <br />
+    <br />
+    <div id="#loadingDiv" class="lds-roller"></div>
+    <div id="chatDiv" style="display:none">
+        <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+
+        <div class="container">
+            <div class="row clearfix">
+                <div class="col-lg-12">
+                    <div class="card chat-app">
+                        <div id="plist" class="people-list">
+                            <div class="input-group">
+                                <input id="search" type="text" class="form-control" placeholder="Search...">
+                            </div>
+                            <ul style="overflow-y:scroll; height:470px;" id="users_list" class="list-unstyled chat-list mt-2 mb-0">
+                            </ul>
+                        </div>
+                        <div class="chat">
+                            <div class="chat-header clearfix">
+                                <div class="row">
+                                    <div >
+
+                                        <div class="chat-about">
+                                            <h6 id="current_user" style="color: #1cc3b2;" class="m-b-0">Admin Chat</h6>
+                                            <!--<small>Last seen: 2 hours ago</small>-->
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                            <div id="chat-window" style="overflow-y: scroll; height: 400px; display: flex; flex-direction: column-reverse; " class="chat-history">
+                                <ul id="history" class="m-b-0">
+                                </ul>
+                            </div>
+                            <div class="chat-message clearfix">
+                                <div class="input-group mb-0">
+                                    <div onclick="AddMSG()" class="input-group-prepend">
+                                        <span class="input-group-text"><i class="fa fa-send"></i></span>
+                                    </div>
+                                    <input id="txtbox" type="text" class="form-control" placeholder="Enter text here...">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="dataTables" style="display:none">
+      
+        <div class="tableDiv" style="width: 1400px; padding-right: 30px; padding-left: 30px; ">
+            <h2>Users</h2>
+            <table id="UsersTable" class="display nowrap" style="width:90%">
+                <thead>
+                    <tr>
+                        <th>User Email</th>
+                        <th>User Name</th>
+                        <th>Sign Up Date</th>
+                        <th>Total Resarvations</th>
+                        <th>Total Incomes</th>
+                        <th>Total Cancellations</th>
+
+                    </tr>
+                </thead>
+            </table>
+        </div>
+        <div class="tableDiv" style="width: 1400px; padding-right: 30px; padding-left: 30px; ">
+            <h2>Hosts</h2>
+            <table id="HostTable" class="display nowrap" style="width:90%">
+                <thead>
+                    <tr>
+                        <th>Host Profile</th>
+                        <th>Host ID</th>
+                        <th>Host Name</th>
+                        <th>Host Since</th>
+                        <th>Total Cancelations</th>
+                        <th>Total Incomes</th>
+                        <th>Total Apartments</th>
+
+                    </tr>
+                </thead>
+            </table>
+        </div>
+        <div class="tableDiv" style="width: 1400px; padding-right: 30px; padding-left: 30px; ">
+            <h2>Apartments</h2>
+            <table id="ApartmentTable" class="display nowrap" style="width:90%">
+                <thead>
+                    <tr>
+                        <th>Apartment Id</th>
+                        <th>Apartment Name</th>
+                        <th>Total Cancelations</th>
+                        <th>Total Rented Days</th>
+
+                    </tr>
+                </thead>
+            </table>
+        </div>
+    </div>
+  
+    <!-- The core Firebase JS SDK is always required and must be listed first -->
+    <script src="https://www.gstatic.com/firebasejs/7.14.6/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.14.6/firebase-auth.js"></script>
+
+    <!-- TODO: Add SDKs for Firebase products that you want to use
+         https://firebase.google.com/docs/web/setup#available-libraries -->
+
+    <script src="https://www.gstatic.com/firebasejs/7.14.6/firebase-analytics.js"></script>
+
+    <!--**** Remember to add the database script ***-->
+    <script src="https://www.gstatic.com/firebasejs/7.14.6/firebase-database.js"></script>
+
+    <!--Your web app's Firebase configuration-->
+    <script src="fb_config.js"></script>
+    <script>
+        init();
+    </script>
+</body>
+</html>

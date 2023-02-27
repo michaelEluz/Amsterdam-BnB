@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="description" content="">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Title -->
+    <title>Chillax Yourself - Your next break</title>
+
+    <!-- Favicon -->
+    <link rel="icon" href="./img/logo.jpg">
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+    <script src="../Scripts/ajaxCalls.js"></script>
+    <script src="../Scripts/jquery-3.4.1.min.js"></script>
+    <script src="JavaScript.js"></script>
+    <script>
+        function initMap() {
+            $("#popup_div").slideUp();
+            //User = JSON.parse(localStorage.getItem('User'));
+            notification = 0;
+            sticky_navBar();
+            User = JSON.parse(localStorage.getItem('User'));
+            if (User) {
+                ref_Notification = firebase.database().ref(User.Email.replace('.', 'DOT') + "NFA");
+                ref_Admin_Notification_list = firebase.database().ref("A_N");
+            }
+
+            loginOrSignOut();
+            init_chat();
+            var options = {
+            center: { lat: 52.379189, lng: 4.899431 },
+            zoom: 12
+            }
+            map = new google.maps.Map(document.getElementById("map"), options);
+
+
+            ajaxCall("GET", "../api/Apartments", "", scb, ecb);
+
+            var marker = new google.maps.Marker({
+                position: { lat: 52.379189, lng: 4.899431 },
+                icon: "https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png",
+                title: "City Center"
+            });
+            marker.setMap(map);
+
+            // To add the marker to the map, call setMap();
+        }
+
+        function scb(all_apartments) {
+            console.log(all_apartments);
+            for (i in all_apartments) {
+
+                let marker = new google.maps.Marker({
+                    position: { lat: all_apartments[i].A_c.Latitude, lng: all_apartments[i].A_c.Longitude },
+                    title: "Price: " + all_apartments[i].Price + " ** " + all_apartments[i].Name,
+                    customInfo: all_apartments[i].Id
+                });
+                marker.addListener('click', function () {
+                    
+                    apartmentId = (this.customInfo);
+                        let url = `../api/Apartments/${apartmentId}`;
+                    ajaxCall("GET", url, "", scb_single_room, ecb_single_room);
+                    
+                });
+                marker.setMap(map);
+
+            }
+        }
+        function ecb() {
+
+        }
+        function scb_single_room(Apartment) {
+            apartment = Apartment;
+            $("#popup_div").slideDown();
+            $("#popup_div").empty();
+            let img = $("<img>");
+            
+            
+            img.attr("src", apartment.Picture_url);
+           
+            console.log(apartment);
+            let h2_name = $("<h5>");
+            let h4_price = $("<h6>");
+            let h6_capacity = $("<h6>");
+            let h6_Ratted = $("<h6>");
+            let close_btn = $("<button>");
+            let detailesBtn = $('<button>');
+            close_btn.text("-");
+            close_btn.css("margin-left", "260px");
+            close_btn.css('cursor', 'pointer');
+            close_btn.css('margin-top', '5px');
+            close_btn.css('margin-bottom', '5px');
+
+            close_btn.click(function () {
+
+                $("#popup_div").slideUp();
+            });
+            close_btn.css('border-radius', '8px');
+            h2_name.text(apartment.Name);
+            h4_price.text("Price: " + parseFloat(apartment.Price).toFixed(2) + "$")
+            h6_capacity.text("Max Guests: " + apartment.Accomodates);
+            detailesBtn.addClass("btn roberto-btn");
+            detailesBtn.css('width', '60%');
+            detailesBtn.css('margin-bottom', '5px')
+            detailesBtn.css('margin-left', '60px')
+            detailesBtn.text("View details");
+            detailesBtn.attr('id', 'viewapartment');
+            let containter = $("<div>");
+            $("#popup_div").append(close_btn);
+            $("#popup_div").append(img);
+            containter.append(h2_name);
+            containter.append(h4_price);
+            containter.append(h6_capacity);
+            containter.addClass("popup_div_contets")
+            $("#popup_div").append(containter);
+
+            $("#popup_div").append(detailesBtn);
+
+
+            $("#viewapartment").attr('onclick', 'countinue_procces(' + apartment.Id + ')');
+            
+        }
+
+        function countinue_procces(apartment) {
+            let url2 = `../api/Resarvations/${apartment}`;
+            ajaxCall("GET", url2, "", resarvationByIdScb, resarvationByIdEcb);
+        }
+        function resarvationByIdScb(resarvation) {
+            apartment.Resavations_list = resarvation;
+            localStorage.setItem('apartment', JSON.stringify(apartment));
+            window.location.href = "single-room.html";
+
+        }
+        function resarvationByIdEcb() {
+
+        }
+        function ecb_single_room() {
+            console.log("404 error");
+        }
+    </script>
+
+</head>
+
+<body>
+    <!-- Preloader -->
+    <div id="preloader">
+        <div class="loader"></div>
+    </div>
+    <!-- /Preloader -->
+    <!-- Header Area Start -->
+
+    <header class="header-area">
+        <!-- Top Header Area Start -->
+        <div class="top-header-area">
+            <div class="container">
+                <div class="row">
+
+                    <div class="col-8">
+                        <div class="top-header-content">
+                            <a href="#"><i class="icon_phone"></i> <span>052-5539426</span></a>
+                            <a href="#"><i class="icon_mail"></i> <span>Mikieluz@gmail.com</span></a>
+                            <a href="#" id="user_pos"><span>Welcome Guest</span></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Top Header Area End -->
+        <!-- Main Header Start -->
+        <div id="navbar" class="main-header-area">
+            <div class="classy-nav-container breakpoint-off">
+                <div class="container">
+                    <!-- Classy Menu -->
+                    <nav class="classy-navbar justify-content-between" id="robertoNav">
+
+                        <!-- Logo -->
+                        <a class="logo" href="index.html"><img src="img/logo.jpg" style="height:75px;width:110px; border-radius:20px ;margin-top:12px;" /></a>
+
+                        <div class="classy-menu">
+                            <!-- Menu Close Button -->
+                            <!-- Nav Start -->
+                            <div class="classynav" style="float:left">
+                                <ul id="nav">
+                                    <li class="active"><a href="./index.html">Home</a></li>
+                                    <li id="apartmentsPages">
+                                        <a href="./apartments.html">Apartments</a>
+                                        <ul class="dropdown">
+                                            <li><a href="./cart.html">- My Resarvations</a></li>
+                                            <li><a href="./Favorites.html">-My Favorites</a></li>
+                                        </ul>
+                                    </li>
+                                    <li><a href="./map.html">Map</a></li>
+                                    <li><a href="./about.html">About Us</a></li>
+
+                                </ul>
+
+                                <!-- Book Now -->
+                                <div class="book-now-btn ml-3 ml-lg-5">
+                                    <ul>
+                                        <li>
+                                            <a id="login" href="login.html">Login\Sign Up<i class="fa fa-long-arrow-right" aria-hidden="true"></i></a>
+                                        </li>
+                                        <li>  <a id="SignOut" href="./map.html">Sign Out<i class="fa fa-long-arrow-right" aria-hidden="true"></i></a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <!-- Nav End -->
+                        </div>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Header Area End -->
+    <!-- Breadcrumb Area Start -->
+    <div class="breadcrumb-area contact-breadcrumb bg-img bg-overlay jarallax" style="background-image: url(img/bg-img/58.jpg);">
+        <div class="container">
+            <div class="row">
+                <div class="col-12">
+                    <div class="breadcrumb-content text-center mt-100">
+                        <h2 class="page-title">On the spot</h2>
+                        <h3 class="page-title" style="font-size:22px;">Find Apartment by location on the map</h3>
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb justify-content-center">
+                                <li class="breadcrumb-item"><a href="index.html">Home</a></li>
+                                <li class="breadcrumb-item active" aria-current="page">Map</li>
+                            </ol>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Breadcrumb Area End -->
+    <!-- Google Maps & Contact Info Area Start -->
+    <section class="google-maps-contact-info">
+        <div class="container-fluid" style="margin-bottom:50px">
+            <div class="google-maps-contact-content">
+                <!-- Google Maps -->
+                <div id="map" class="google-maps">
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- Google Maps & Contact Info Area End -->
+    <!-- Footer Area Start -->
+    <div id="chat_box" class="chat_box">
+        <div class="chat-box-header">Send Message To Admin</div>
+        <div class="ch">
+            <ul id="history">
+            </ul>
+
+        </div><!-- HTML !-->
+
+        <div id="inputs">
+            <input id="send_message" class="button-33" type="button" value="Send">
+            <input placeholder="Type a message..." id="text_box" type="text" class="form-control">
+        </div>
+    </div>
+
+    <!-- Footer Area Start -->
+    <footer style="position: fixed;" id="chat_footer">
+        <!-- Copywrite Area -->
+
+        <div id="admin_chat" style=" height: 100%; text-align: center; ">
+            <a href="#" style="font-weight:bold">Chat With Admin</a>
+            <p id="notification" ></p>
+        </div>
+    </footer>
+
+    <div id="popup_div">
+
+
+    </div>
+
+    <!-- Footer Area End -->
+    <!--firebase libaryes-->
+
+    <script src="https://www.gstatic.com/firebasejs/7.14.6/firebase-app.js"></script>
+
+    <!-- TODO: Add SDKs for Firebase products that you want to use
+         https://firebase.google.com/docs/web/setup#available-libraries -->
+
+    <script src="https://www.gstatic.com/firebasejs/7.14.6/firebase-auth.js"></script>
+
+    <!--**** Remember to add the database script ***-->
+    <script src="https://www.gstatic.com/firebasejs/7.14.6/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.14.6/firebase-analytics.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.14.6/firebase-database.js"></script>
+    <script src="fb_config.js"></script>
+
+    <!--Your web app's Firebase configuration-->
+    <script>
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        firebase.analytics();
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+    </script>
+
+    <!-- **** All JS Files ***** -->
+    <!-- jQuery 2.2.4 -->
+    <script src="js/jquery.min.js"></script>
+    <!-- Popper -->
+    <script src="js/popper.min.js"></script>
+    <!-- Bootstrap -->
+    <script src="js/bootstrap.min.js"></script>
+    <!-- All Plugins -->
+    <script src="js/roberto.bundle.js"></script>
+    <!-- Active -->
+    <script src="js/default-assets/active.js"></script>
+    <script async
+            src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBM8EdF6xKVf6AFUeL30ScYKKGRyW1hNZQ&callback=initMap"></script>
+</body>
+
+</html>

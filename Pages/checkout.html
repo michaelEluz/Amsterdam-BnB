@@ -1,0 +1,127 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="description" content="">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Title -->
+    <title>Chillax Yourself - Your next break</title>
+
+    <!-- Favicon -->
+    <link rel="icon" href="./img/logo.jpg">
+
+    <!-- Stylesheet -->
+    <link href="css/checkoutStyle.css" rel="stylesheet" />
+    <script src="../Scripts/jquery-3.4.1.min.js"></script>
+    <script src="../Scripts/ajaxCalls.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            $("#submitResarvetion").on('click', subRes);
+            order = JSON.parse(localStorage.getItem('Order'));
+            $("#hostName").text(order.hostName);
+            $("#pricePerNight").text((Math.round(order.price * 100) / 100).toFixed(2));
+            $("#checkinDate").text(order.checkIn);
+            $("#checkoutDate").text(order.checkOut);
+            $("#priceSummary").text((Math.round(order.price * 100) / 100).toFixed(2));
+            $("#nightsNum").text(order.totalNights);
+            $("#totalNightsPrice").text((Math.round(order.total_price * 100) / 100).toFixed(2));
+            $("#totalPrice").text((Math.round(order.total_price * 100) / 100).toFixed(2));
+            $("#imgDiv").css("background-image", "url(" + order.img + ")");
+        });
+
+        function subRes() {
+            user = JSON.parse(localStorage.getItem('User'));
+            apartment = JSON.parse(localStorage.getItem('apartment'));
+            let reservation = {
+                resavation_id: 0,
+                user_email: order.user_email,
+                orderDate: null,
+                checkIn: order.checkIn,
+                checkOut: order.checkOut,
+                hostId: apartment.Host.Host_Id,
+                apartmentId: order.apartmentId,
+                totalPrice: order.total_price,
+                is_cancel: false
+            }
+
+            ajaxCall("POST", "../api/Resarvations", JSON.stringify(reservation), scb, ecb);
+            //return false;
+        }
+        function scb(status) {
+            console.log(status);
+            apartment.IsFinish = 1;
+            localStorage.setItem('apartment', JSON.stringify(apartment));
+            if (status == "status 200") {              
+                
+                window.location.href = "succese.html";
+            } else {
+                window.location.href = "unsuccese.html";
+            }
+            
+        }
+       
+
+        function ecb(status) {
+            console.log(status);
+            window.location.href = "unsuccese.html";
+
+        }
+        var model = document.querySelector(".model");
+        function fadeIn() {
+            console.log('fadein')
+            model.className += " fadeIn";
+        }
+
+
+
+    </script>
+</head>
+<body>
+    <div class="model">
+        <div id="imgDiv" class="room">
+            <div class="text-cover">
+                <h1><span id="hostName"></span>'s House</h1>
+                <p class="price"> <span id="pricePerNight"></span> USD / Night</p>
+                <hr>               
+                <p><span id="checkinDate">20-4-1998</span> to <span id="checkoutDate">3-35-5555</span></p>
+            </div>
+        </div><div class="payment">
+            <div class="receipt-box">
+                <h3>Reciept Summary</h3>
+                <table class="table">
+                    <tr>
+                        <td><span id="priceSummary">30</span> x <span id="nightsNum">4</span> nights</td>
+                        <td><span id="totalNightsPrice">233</span> USD</td>
+                    </tr>
+                    <tr>
+                        <td>Discount</td>
+                        <td>0 USD</td>
+                    </tr>                   
+                    <tfoot>
+                        <tr>
+                            <td>Sum</td>
+                            <td><span id="totalPrice"></span>$</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div class="payment-info">
+                <h3>Payment Info</h3>
+                <!--<form action="" id="submitResarvetion">-->
+                    <label>Name on Credit Card</label>
+                    <input type="text" name="firstname" value="">
+                    <label>Credit Card Number</label>
+                    <input type="text" name="lastname" value="">
+                    <br><br>
+                    <input class="btn" type="button" id="submitResarvetion" value="Book Your resarvetion">
+                <!--</form>-->
+            </div>
+        </div>
+    </div>
+</body>
+</html>

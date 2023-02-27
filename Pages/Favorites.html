@@ -1,0 +1,310 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+
+    <meta charset="utf-8" />
+    <meta charset="UTF-8">
+    <title>Chillax Yourself - Your next break</title>
+
+    <meta name="description" content="">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <script src="../Scripts/ajaxCalls.js"></script>
+    <script src="../Scripts/jquery-3.4.1.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+    <script src="JavaScript.js"></script>
+
+    <!-- Title -->
+    <!-- Favicon -->
+    <link rel="icon" href="./img/logo.jpg">
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+    <link href="style.css" rel="stylesheet" />
+
+    <script>
+        $(document).ready(function () {
+            User = JSON.parse(localStorage.getItem('User'));
+            loginOrSignOut();
+            init_chat();
+
+            let email = User.Email;
+            let url = `../api/Users/${email}/favorites`;
+            ajaxCall("GET", url, "", scb, ecb);
+        });
+        function scb(apartments) {
+            console.log(apartments);
+            if (apartments.length == 0) {
+                swal({
+                    title: "Your list is empty",
+                    text: "Find vecation with us!",
+                    type: "alert"
+                }).then(function () {
+                    window.location.href = "index.html";
+                    return false;
+                });
+            }
+            User_apartments = apartments;
+            for (let i in apartments) {
+                render_ap(apartments[i], i);
+            }
+        }
+        function ecb(status) {
+            console.log(status);
+        }
+        function render_ap(ap, i) {
+            let div = $("<div>");
+            div.prop('id', ap.Id);
+            div.addClass("single-room-area d-flex align-items-center mb-50 wow fadeInUp");
+            let divImg = $("<div>");
+            divImg.addClass("room-thumbnail");
+            let apartmentImg = document.createElement("img");
+            apartmentImg.src = ap.Picture_url;
+            divImg.append(apartmentImg);
+            div.append(divImg);
+            let div2 = $("<div>");
+            div2.addClass("room-content");
+            let h2_name = $("<h2>");
+            let h4_price = $("<h4>");
+            let reviews = ap.Reviews.Review_scores_rating;
+            let h6_reviews = $("<h6>");
+            let h6_capacity = $("<h6>");
+            let detailesBtn = $('<button>');
+            let unLikeBtn = $('<button>');
+            detailesBtn.attr('id', i);
+            detailesBtn.addClass("btn roberto-btn w-100");
+            detailesBtn.addClass("btn view - detail - btn");
+           
+            detailesBtn.text("Get Details");
+            detailesBtn.attr('onclick', 'getDetails(' + ap.Id+')');
+            unLikeBtn.text("Remove");
+            unLikeBtn.css("background-color", "red");                    
+            unLikeBtn.addClass("btn roberto-btn w-100");
+            unLikeBtn.addClass("btn view - detail - btn");
+            unLikeBtn.attr('onclick', 'unlike(' + ap.Id + ')');
+            h2_name.text(ap.Name);
+            h4_price.text("Price: " + parseFloat(ap.Price).toFixed(2)+"$");
+            h6_capacity.text("Max Gusts: " + ap.Accomodates);
+            h6_reviews.text("Rating: " + parseFloat(reviews).toFixed(1));
+            div2.append(h2_name);
+            div2.append(h4_price);
+            div2.append(h6_reviews);
+            div2.append(h6_capacity);
+            div2.append(detailesBtn);
+            div2.append(unLikeBtn);
+            div.append(div2);
+            div.css("background-color","#E0FFFF")
+            $("#apartmentsDiv").append(div);
+        }
+        function unlike(id) {
+            let url = `../api/Apartments/${id}/${User.Email}/UnLike`;
+            ajaxCall("PUT", url, "", scbUnLike, ecbUnLike);
+        }
+        function scbUnLike(status) {
+            swal({
+                title: "Remove from favorites",
+                text: "The apartment has been removed from your favorites",
+                type: "succes"
+            }).then(function () {
+                window.location.href = "Favorites.html";
+                return false;
+            });
+
+        }
+        function ecbUnLike(status) {
+            console.log(status);
+        }
+
+        function getDetails(id) {
+            console.log(id);        
+            let url = `../api/Apartments/${id}`;
+            ajaxCall("GET", url, "", apartmentByIdScb, apartmentByIdEcb);
+        }
+        function apartmentByIdScb(apartment) {
+            console.log(apartment);
+            Apartment = apartment;
+            let url2 = `../api/Resarvations/${Apartment.Id}`;
+            ajaxCall("GET", url2, "", resarvationByIdScb, resarvationByIdEcb);
+        }
+        function apartmentByIdEcb(status) {
+            console.log(status);
+        }
+        function resarvationByIdScb(resarvation_list) {
+            console.log(resarvation_list);
+            Apartment.Resavations_list = resarvation_list;
+            localStorage.setItem('apartment', JSON.stringify(Apartment));
+            window.location.href = "single-room.html";
+        }
+        function resarvationByIdEcb(status) {
+            console.log(status);
+
+        }
+
+    </script>
+</head>
+<body>
+    <!-- /Preloader -->
+    <div id="preloader">
+        <div class="loader"></div>
+    </div>
+    <!-- Header Area Start -->
+    <!-- Header Area Start -------------------------------------------------------------------------------------------->
+    <header class="header-area">
+        <!-- Top Header Area Start -->
+        <div class="top-header-area">
+            <div class="container">
+                <div class="row">
+
+                    <div class="col-8">
+                        <div class="top-header-content">
+                            <a href="#"><i class="icon_phone"></i> <span>(123) 456-789-1230</span></a>
+                            <a href="#"><i class="icon_mail"></i> <span>info.chillax@gmail.com</span></a>
+                            <a href="#" id="user_pos"><span>Welcome Guest</span></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Top Header Area End -->
+        <!-- Main Header Start -->
+        <div id="navbar" class="main-header-area">
+            <div class="classy-nav-container breakpoint-off">
+                <div class="container">
+                    <!-- Classy Menu -->
+                    <nav class="classy-navbar justify-content-between" id="robertoNav">
+
+                        <!-- Logo -->
+                        <a class="logo" href="index.html"><img src="img/logo.jpg" style="height:75px;width:110px; border-radius:20px ;margin-top:12px;" /></a>
+
+                        <div class="classy-menu">
+                            <!-- Menu Close Button -->
+                            <!-- Nav Start -->
+                            <div class="classynav" style="float:left">
+                                <ul id="nav">
+                                    <li class="active"><a href="./index.html">Home</a></li>
+                                    <li id="apartmentsPages">
+                                        <a href="./apartments.html">Apartments</a>
+                                        <ul class="dropdown">
+                                            <li><a href="./cart.html">- My Resarvations</a></li>
+                                            <li><a href="./Favorites.html">-My Favorites</a></li>
+                                        </ul>
+                                    </li>
+                                    <li><a href="./map.html">Map</a></li>
+                                    <li><a href="./about.html">About Us</a></li>
+
+                                </ul>
+                                <div class="book-now-btn ml-3 ml-lg-5">
+                                    <ul>
+                                        <li>
+                                            <a id="login" href="login.html">Login\Sign Up<i class="fa fa-long-arrow-right" aria-hidden="true"></i></a>
+                                        </li>
+                                        <li>  <a id="SignOut" href="./index.html">Sign Out<i class="fa fa-long-arrow-right" aria-hidden="true"></i></a></li>
+                                    </ul>
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="breadcrumb-area bg-img bg-overlay jarallax" style="background-image: url(img/bg-img/57.jpg);">
+        <div class="container h-100">
+            <div class="row h-100 align-items-center">
+                <div class="col-12">
+                    <div class="breadcrumb-content text-center">
+                        <h2 class="page-title">Favorites</h2>
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb justify-content-center">
+                                <li class="breadcrumb-item"><a href="index.html">Home</a></li>
+                                <li class="breadcrumb-item active" aria-current="page">Apartments</li>
+                            </ol>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Breadcrumb Area End -->
+    <!-- Rooms Area Start -->
+    <div class="roberto-rooms-area section-padding-100-0">
+        <div class="container">
+            <div class="row">
+                <div id="apartmentsDiv" class="col-12 col-lg-12">
+
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <br />
+    <br />
+
+    <!-- Rooms Area End -->
+    <div id="chat_box" class="chat_box">
+        <div class="chat-box-header">Send Message To Admin</div>
+        <div class="ch">
+            <ul id="history">
+            </ul>
+
+        </div><!-- HTML !-->
+
+        <div id="inputs">
+            <input id="send_message" class="button-33" type="button" value="Send">
+            <input placeholder="Type a message..." id="text_box" type="text" class="form-control">
+        </div>
+    </div>
+
+    <!-- Footer Area Start -->
+    <footer style="position: fixed;" id="chat_footer">
+        <!-- Copywrite Area -->
+
+        <div id="admin_chat" style=" height: 100%; text-align: center; ">
+            <a href="#" style="font-weight:bold">Chat With Admin</a>
+            <p id="notification" ></p>
+        </div>
+    </footer>
+    <!-- Footer Area End -->
+    <!--firebase libaryes-->
+
+    <script src="https://www.gstatic.com/firebasejs/7.14.6/firebase-app.js"></script>
+
+    <!-- TODO: Add SDKs for Firebase products that you want to use
+         https://firebase.google.com/docs/web/setup#available-libraries -->
+
+    <script src="https://www.gstatic.com/firebasejs/7.14.6/firebase-auth.js"></script>
+
+    <!--**** Remember to add the database script ***-->
+    <script src="https://www.gstatic.com/firebasejs/7.14.6/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.14.6/firebase-analytics.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.14.6/firebase-database.js"></script>
+    <script src="fb_config.js"></script>
+    <!--Your web app's Firebase configuration-->
+    <script>
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        firebase.analytics();
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+    </script>
+
+    <!-- **** All JS Files ***** -->
+    <!-- jQuery 2.2.4 -->
+    <script src="js/jquery.min.js"></script>
+    <!-- Popper -->
+    <script src="js/popper.min.js"></script>
+    <!-- Bootstrap -->
+    <script src="js/bootstrap.min.js"></script>
+    <!-- All Plugins -->
+    <script src="js/roberto.bundle.js"></script>
+    <!-- Active -->
+    <script src="js/default-assets/active.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,561 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="description" content="">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Title -->
+    <title>Chillax Yourself - Your next break</title>
+
+    <!-- Favicon -->
+    <link rel="icon" href="./img/logo.jpg">
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+    <script src="../Scripts/jquery-3.4.1.min.js"></script>
+    <script src="../Scripts/jquery-3.4.1.min.js"></script>
+    <script src="../Scripts/ajaxCalls.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+    <script src="JavaScript.js"></script>
+    <script>
+
+        $(document).ready(function () {
+            apartment = JSON.parse(localStorage.getItem('apartment'));
+            User = JSON.parse(localStorage.getItem('User'));
+            days = getAllDatedDates();
+            console.log(apartment);                    
+            render_elements();
+            init_chat();
+            ajaxCall("GET", `../api/Reviews/last`, "", LastreviewSCB, LastreviewECB);
+
+            
+        });
+        function add_events() {
+            $("#checkAvail").on('click', submitForm);
+            $('#checkInDate').on('change', CheckNewInDate);
+            $('#checkOutDate').on('change', CheckNewOutDate);
+        }
+        function render_elements() {
+            amenitiesValidate();
+            render_apartment();
+            loginOrSignOut();
+            add_events();
+            add_min_to_calender();
+        }
+        function render_apartment() {
+            $("#apartmentHostName").text(apartment.Host.Host_name + "'s aprartment");
+            $("#apartmentPrice").text((Math.round(apartment.Price * 100) / 100).toFixed(2) + "$");
+            document.getElementById('apartmentImg').src = apartment.Picture_url;
+            document.getElementById('hostImg').src = apartment.Host.Host_picture_url;
+            if (apartment.Host.Host_url != "")
+                document.getElementById("hostLink").setAttribute("href", apartment.Host.Host_url);
+            document.getElementById("hostLink").setAttribute("target", target = "_blank");
+
+            $("#capacity").text(apartment.Accomodates + " Guests");
+            let rounded = Math.round(apartment.Reviews.Review_scores_rating);
+            $("#star" + rounded).prop("checked", true);
+            $("#radio").children().attr("disabled", "disabled");
+            if (parseInt(apartment.Bedrooms) > 0)
+                $("#apartmentBedrooms").text(apartment.Bedrooms);
+
+            let name = apartment.Name;
+            let des = apartment.Description;
+
+            $("#apartmentName").html(name);
+            $("#apartmentDes").html(des);
+
+            var reservation = JSON.parse(localStorage.getItem('ap'));
+            if (reservation != null) {
+                $('#checkInDate').val(reservation.checkIn);
+                $('#checkOutDate').val(reservation.checkOut);
+            }
+        }
+      
+        function initMap() {
+            apartment = JSON.parse(localStorage.getItem('apartment'));
+          
+            var options = {
+                center: { lat: 52.379189, lng: 4.899431 },
+                zoom: 12
+            }
+            var marker = new google.maps.Marker({
+                position: { lat: apartment.A_c.Latitude, lng: apartment.A_c.Longitude },
+                title: "Apartment Location"
+            });
+            map = new google.maps.Map(document.getElementById("map"), options);
+            marker.setMap(map);
+
+        }
+
+        function amenitiesValidate() {
+            $('#AC').hide();
+            $('#KITCHEN').hide();
+            $('#TV').hide();
+            $('#WIFI').hide();
+            $('#Essentials').hide();
+            amenities = apartment.Amenities;
+            if (amenities.includes("Wifi")) {
+                $('#WIFI').show();
+            }
+            if (amenities.includes("Kitchen")) {
+                $('#KITCHEN').show();
+            }
+            if (amenities.includes("TV")) {
+                $('#TV').show();
+            }
+            if (amenities.includes("Essentials")) {
+                $('#Essentials').show();
+            }
+            if (amenities.includes("Heating")) {
+                $('#AC').show();
+            }
+        }
+
+        function add_min_to_calender() {
+            var todayDate = new Date();
+            var month = todayDate.getMonth() + 1;
+            var year = todayDate.getUTCFullYear() - 0;
+            var tdate = todayDate.getDate();
+            if (month < 10) {
+                month = "0" + month
+            }
+            if (tdate < 10) {
+                tdate = "0" + tdate;
+            }
+            var maxDate = year + "-" + month + "-" + tdate;
+            document.getElementById("checkInDate").setAttribute("min", maxDate);
+            document.getElementById("checkOutDate").setAttribute("min", maxDate);
+            console.log(maxDate);
+        }
+
+        function getAllDatedDates() {
+            check = [];
+            for (dates in apartment.Resavations_list) {
+                check.push(getDates(apartment.Resavations_list[dates].CheckIn, apartment.Resavations_list[dates].CheckOut));
+            }
+            console.log(check);
+            return check;
+        }
+
+        function addDays(date, days) {
+            var result = new Date(date);
+            result.setDate(result.getDate() + days);
+            return result;
+        }
+
+
+        function getDates(startDate, stopDate) {
+            var dateArray = new Array();
+            var currentDate = startDate;
+            while (Date.parse(currentDate) <= Date.parse(stopDate)) {
+                dateArray.push(new Date(currentDate));
+                currentDate = addDays(currentDate, 1);
+            }
+            return dateArray;
+        }
+
+        function CheckNewInDate() {
+            let newDate = Date.parse($('#checkInDate').val());
+            for (dates in apartment.Resavations_list) {
+                if (newDate >= Date.parse(apartment.Resavations_list[dates].CheckIn) &&
+                    newDate <= Date.parse(apartment.Resavations_list[dates].CheckOut)) {
+                    swal("Date is already taken");
+                    $('#checkInDate').focus();
+                    $('#checkInDate').val("");
+                }
+            }
+        }
+
+        function CheckNewOutDate() {
+            let newDate = Date.parse($('#checkOutDate').val());
+            for (dates in apartment.Resavations_list) {
+                if (newDate >= Date.parse(apartment.Resavations_list[dates].CheckIn) &&
+                    newDate <= Date.parse(apartment.Resavations_list[dates].CheckOut)) {
+                    swal("Date is already taken");
+                    $('#checkOutDate').val("");
+
+                }
+            }
+        }
+
+        function reviewSCB(reviews) {
+            reviewList = reviews;
+            console.log(reviewList);
+            for (let i in reviewList) {
+                renderReview(reviewList[i]);
+            }
+        }
+
+        function renderReview(review) {
+            let div = $("<div>");
+            div.addClass("single-room-review-area d-flex align-items-center")
+            let divImg = $("<div>");
+            divImg.addClass("reviwer-thumbnail");
+            let apartmentImg = document.createElement("img");
+            apartmentImg.src = "img/core-img/man-300x300.png";
+            divImg.append(apartmentImg);
+            div.append(divImg);
+            let div2 = $("<div>");
+            div2.addClass("reviwer-content");
+            let div3 = $("<div>");
+            div3.addClass("reviwer-title-rating d-flex align-items-center justify-content-between");
+            let div4 = $("<div>");
+            div4.addClass("reviwer-title");
+            let dateSpan = $("<span>");
+            dateSpan.text(review.ReviewDate.toString().substring(0, 10));
+            let nameH6 = $("<h6>");
+            nameH6.text(review.Reviewer_Name);
+            div4.append(dateSpan);
+            div4.append(nameH6);
+            div3.append(div4);
+            div2.append(div3);
+            let commentP = $("<p>");
+            commentP.html(review.Content);
+            div2.append(commentP);
+            div.append(div2);
+
+            $("#reviewDiv").append(div);
+        }
+
+        function reviewECB(error) {
+            console.log(error);
+        }
+
+        function LastreviewSCB(lastId) {
+            lastReviewId = lastId;
+            console.log(lastReviewId);
+            let url = `../api/Reviews/${apartment.Id}`;
+            ajaxCall("GET", url, "", reviewSCB, reviewECB);
+        }
+
+        function LastreviewECB(error) {
+
+        }
+
+        function submitForm() {
+            try {
+                $("a#user_pos").text("Hello " + User.UserName);
+
+            } catch {
+                window.location.href = "login.html";
+            }
+            let checkIn = $('#checkInDate').val();
+            let checkOut = $('#checkOutDate').val();
+            if (checkIn == "" || checkOut == "") {
+                swal("Choose Dates", "Choose a valid check in and check out");
+                return;
+            }
+            if (checkIn > checkOut) {
+                swal("Checkin after checkout", "Sorry, we dont have time machine");
+                return;
+            }
+
+            let apartmentId = apartment.Id;
+            let userEmail = User.Email;
+            let totalNights = ((Date.parse(checkOut) - Date.parse(checkIn)) / (1000 * 3600 * 24));
+            let totalPrice = totalNights * parseInt(apartment.Price)
+            let order = {
+                apartmentId: apartmentId,
+                hostId: apartment.Host.host_Id,
+                hostName: apartment.Host.Host_name,
+                user_email: userEmail,
+                orderDate: null,
+                checkIn: checkIn,
+                checkOut: checkOut,
+                totalNights: totalNights,
+                price: apartment.Price,
+                img: apartment.Picture_url,
+                total_price: totalPrice,
+                isCancel: false
+            };
+            localStorage.setItem('Order', JSON.stringify(order));
+            window.location.href = "checkout.html";
+        }
+
+        function addReview() {
+            try {
+                $("a#user_pos").text("Hello " + User.UserName);
+
+            } catch {
+                window.location.href = "login.html";
+            }
+            console.log('commit');
+            let comment = $('#reviewTXT').val();
+            if (comment == "") {
+                $('#reviewTXT').focus();
+                return;
+            }
+            let review = {
+                apartmentId: apartment.Id,
+                reviewId: parseInt(lastReviewId) + 1,
+                reviewer_Name: User.UserName,
+                content: comment
+            };
+            ajaxCall("POST", "../api/Reviews", JSON.stringify(review), addReviewSCB, addReviewECB);
+        }
+
+        function addReviewSCB() {
+            window.location.href = "single-room.html";
+        }
+
+        function addReviewECB() {
+
+        }
+
+
+    </script>
+    <link href="css/singleroomStyle.css" rel="stylesheet" />
+</head>
+
+<body>
+    <!-- Preloader -->
+    <div id="preloader">
+        <div class="loader"></div>
+    </div>
+    <!-- /Preloader -->
+    <!-- Header Area Start -->
+    <header class="header-area">
+        <!-- Top Header Area Start -->
+        <div class="top-header-area">
+            <div class="container">
+                <div class="row">
+
+                    <div class="col-8">
+                        <div class="top-header-content">
+                            <a href="#"><i class="icon_phone"></i> <span>052-5539426</span></a>
+                            <a href="#"><i class="icon_mail"></i> <span>Mikieluz@gmail.com</span></a>
+                            <a href="#" id="user_pos"><span>Welcome Guest</span></a>
+
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        <!-- Top Header Area End -->
+        <!-- Main Header Start -->
+        <div id="navbar" class="main-header-area">
+            <div class="classy-nav-container breakpoint-off">
+                <div class="container">
+                    <!-- Classy Menu -->
+                    <nav class="classy-navbar justify-content-between" id="robertoNav">
+
+                        <!-- Logo -->
+                        <a class="logo" href="index.html"><img src="img/logo.jpg" style="height:75px;width:110px; border-radius:20px ;margin-top:12px;" /></a>
+
+                        <div class="classy-menu">
+                            <!-- Menu Close Button -->
+                            <!-- Nav Start -->
+                            <div class="classynav" style="float:left">
+                                <ul id="nav">
+                                    <li class="active"><a href="./index.html">Home</a></li>
+                                    <li id="apartmentsPages">
+                                        <a href="./apartments.html">Apartments</a>
+                                        <ul class="dropdown">
+                                            <li><a href="./cart.html">- My Resarvations</a></li>
+                                            <li><a href="./Favorites.html">-My Favorites</a></li>
+                                        </ul>
+                                    </li>
+                                    <li><a href="./map.html">Map</a></li>
+                                    <li><a href="./about.html">About Us</a></li>
+                                </ul>
+
+                                <!-- Book Now -->
+                                <div class="book-now-btn ml-3 ml-lg-5">
+                                    <ul>
+                                        <li>
+                                            <a id="login" href="login.html">Login\Sign Up<i class="fa fa-long-arrow-right" aria-hidden="true"></i></a>
+                                        </li>
+                                        <li>  <a id="SignOut" href="./single-room.html">Sign Out<i class="fa fa-long-arrow-right" aria-hidden="true"></i></a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <!-- Nav End -->
+                        </div>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </header>
+    <!-- Header Area End -->
+    <!-- Breadcrumb Area Start -->
+    <div class="breadcrumb-area bg-img bg-overlay jarallax" style="background-image: url(img/bg-img/12.jpg);">
+        <div class="container h-100">
+            <div class="row h-100 align-items-end">
+                <div class="col-12">
+                    <div class="breadcrumb-content d-flex align-items-center justify-content-between pb-5">
+                        <h2 class="room-title" id="apartmentHostName">apartmentName</h2>
+                        <h2> <span class="room-price" id="apartmentPrice">apartmentPrice</span><span>/ Per Night</span></h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Breadcrumb Area End -->
+    <!-- Rooms Area Start -->
+    <div class="roberto-rooms-area section-padding-100-0">
+        <div class="container">
+            <div class="row">
+                <div class="col-12 col-lg-8">
+                    <!-- Single Room Details Area -->
+                    <div class="single-room-details-area mb-50">
+                        <!-- Room Thumbnail Slides -->
+                        <div class="room-thumbnail-slides mb-50">
+                            <div id="room-thumbnail--slide" class="carousel slide" data-ride="carousel">
+                                <div class="carousel-inner">
+                                    <div class="carousel-item active">
+                                        <img src="img/apartmentDefoult.jpg" id="apartmentImg" class="d-block w-100" alt="">
+                                    </div>
+
+                                </div>
+
+
+                            </div>
+                        </div>
+
+                        <!-- Room Features -->
+                        <div class="room-features-area d-flex flex-wrap mb-50">
+                            <h6 id="apartmentSize">Size: <span>350-425sqf</span></h6>
+                            <h6 id="apartmentGusts">Capacity: <span id="capacity"></span></h6>
+                            <h6>Bedrooms: <span id="apartmentBedrooms">King beds</span></h6>
+                            <h6>Host profile: <span style="margin-top:5px"><a id="hostLink"><img src="img/apartmentDefoult.jpg" id="hostImg" style="height:50px;border-radius:10px" alt=""></a></span></h6>
+                        </div>
+
+                        <p id="apartmentName"></p>
+                        <p id="apartmentDes"></p>
+                    </div>
+
+                    <!-- Room Service -->
+                    <div class="room-service mb-50">
+                        <h4>Room Services</h4>
+
+                        <ul>
+                            <li id="AC"><img src="img/core-img/icon1.png" alt=""> Air Conditioning</li>
+                            <li id="KITCHEN"><img src="img/core-img/icon3.png" alt=""> Kitchen</li>
+                            <li id="TV"><img src="img/core-img/icon4.png" alt=""> Cable TV</li>
+                            <li id="WIFI"><img src="img/core-img/icon5.png" alt=""> Unlimited Wifi</li>
+                            <li id="Essentials"><img src="img/core-img/icon6.png" alt=""> Essentials</li>
+                        </ul>
+                    </div>
+
+                    <!-- Room Review -->
+                    <div id="reviewDiv" class="room-review-area mb-100">
+                        <h4>Room Review</h4>
+                        <textarea placeholder="Write here your own review:" id="reviewTXT" rows="10" cols="88"></textarea>
+                        <button id="addReviewBTN" class="btn roberto-btn w-100" onclick="addReview()">Add Review</button>
+                    </div>
+                </div>
+
+                <div class="col-12 col-lg-4">
+                    <!-- Hotel Reservation Area -->
+                    <div class="range-price">
+                        <div id="radio" style="font-size:19px;" class="rate">
+                            <input type="radio" onclick="star_check()" id="star5" name="rate" value="5" />
+                            <label for="star5" title="text">5 stars</label>
+                            <input type="radio" id="star4" name="rate" value="4" />
+                            <label for="star4" title="text">4 stars</label>
+                            <input type="radio" id="star3" name="rate" value="3" />
+                            <label for="star3" title="text">3 stars</label>
+                            <input type="radio" id="star2" name="rate" value="2" />
+                            <label for="star2" title="text">2 stars</label>
+                            <input type="radio" id="star1" name="rate" value="1" />
+                            <label for="star1" title="text">1 star</label>
+                        </div>
+                    </div>
+                    <div id="fixture" style="font-size: 30px; text-align: center; margin-bottom: 40px;"></div>
+                    <div class="hotel-reservation--area mb-100">
+                        <div class="form-group mb-30">
+                            <label for="checkInDate">Date</label>
+                            <div id="datepicker">
+                                <div class="row no-gutters">
+                                    <div class="col-6">
+                                        <input type="date" class="input-small form-control" name="checkInDate" id="checkInDate" placeholder="Check In">
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="date" class="input-small form-control" name="checkOutDate" id="checkOutDate" placeholder="Check Out">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <button id="checkAvail" class="btn roberto-btn w-100">Book Now</button>
+                        </div>
+
+                    </div>
+                    <div id="map" class="google-maps">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Rooms Area End -->
+    <!-- Footer Area Start -->
+    <div id="chat_box" class="chat_box">
+        <div class="chat-box-header">Send Message To Admin</div>
+        <div class="ch">
+            <ul id="history">
+            </ul>
+
+        </div><!-- HTML !-->
+
+        <div id="inputs">
+            <input id="send_message" class="button-33" type="button" value="Send">
+            <input placeholder="Type a message..." id="text_box" type="text" class="form-control">
+        </div>
+    </div>
+
+    <!-- Footer Area Start -->
+    <footer style="position: fixed;" id="chat_footer">
+        <!-- Copywrite Area -->
+
+        <div id="admin_chat" style=" height: 100%; text-align: center; ">
+            <a href="#" style="font-weight:bold">Chat With Admin</a>
+            <p id="notification" ></p>
+        </div>
+    </footer>
+    <!-- Footer Area End -->
+    <!--firebase libaryes-->
+
+    <script src="https://www.gstatic.com/firebasejs/7.14.6/firebase-app.js"></script>
+
+    <!-- TODO: Add SDKs for Firebase products that you want to use
+         https://firebase.google.com/docs/web/setup#available-libraries -->
+
+    <script src="https://www.gstatic.com/firebasejs/7.14.6/firebase-auth.js"></script>
+
+    <!--**** Remember to add the database script ***-->
+    <script src="https://www.gstatic.com/firebasejs/7.14.6/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.14.6/firebase-analytics.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.14.6/firebase-database.js"></script>
+    <script src="fb_config.js"></script>
+    <!--Your web app's Firebase configuration-->
+    <script>
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        firebase.analytics();
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+    </script>
+    <!-- ** All JS Files *** -->
+    <!-- jQuery 2.2.4 -->
+    <script src="js/jquery.min.js"></script>
+    <!-- Popper -->
+    <script src="js/popper.min.js"></script>
+    <!-- Bootstrap -->
+    <script src="js/bootstrap.min.js"></script>
+    <!-- All Plugins -->
+    <script src="js/roberto.bundle.js"></script>
+    <!-- Active -->
+    <script src="js/default-assets/active.js"></script>
+    <script async
+            src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBM8EdF6xKVf6AFUeL30ScYKKGRyW1hNZQ&callback=initMap">
+    </script>
+</body>
+
+</html>

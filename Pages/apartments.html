@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="description" content="">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+
+    <!-- Title -->
+    <title>Chillax Yourself - Your next break</title>
+
+    <!-- Favicon -->
+    <link rel="icon" href="./img/logo.jpg">
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+    <script src="../Scripts/ajaxCalls.js"></script>
+    <script src="../Scripts/jquery-3.4.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="JavaScript.js"></script>
+    <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://fonts.googleapis.com/css?family=Comfortaa:700|Source+Sans+Pro" rel="stylesheet">
+
+
+    <script>
+        $(document).ready(function () {
+            global_variables();
+            if (User) {
+                updateLikes();
+            }
+            $("#inner_search").click(submitForm);
+            loginOrSignOut();
+            init_chat();
+            start_render();
+            jQuery(function ($) {
+                $('#apartmentsDiv').on('scroll', function () {
+                    if (($(this).scrollTop() + $(this).innerHeight() >= $(this)[0].scrollHeight - 300) && (!call)&&(skip<=100)) {
+                        call = true;
+                        call_next_ten();
+                    }
+                })
+            });
+        });
+        function call_next_ten() {
+            skip += 10;
+            let url = `../api/Apartments/${checkIn}/${checkOut}
+                                                                            /${rooms}/${gust}/${skip}/${fetch}`;
+            ajaxCall("GET", url, "", AllApartmentsScb, AllApartmentEcb);
+        }
+        function global_variables() {
+            call = false;
+            filtered_apartments = [];
+            markersArray = [];
+            markers_dictionary = {};
+            All_rendered_apartments = {};
+            All_Apartments = [];
+            Apartment = "";
+            Id = "";
+            getJson = JSON.parse(localStorage.getItem('ap'));
+            User = JSON.parse(localStorage.getItem('User'));
+            skip = 0;
+            fetch = 10;
+            checkIn = getJson.checkIn;
+            checkOut = getJson.checkOut;
+            rooms = getJson.rooms;
+            gust = getJson.gusts;
+            jumping_arr = [];
+            bool_filter = false;
+            
+        }
+        function updateLikes() {
+            let url = `../api/Users/${User.Email}/GetLikes`;
+            ajaxCall("GET", url, "", GETscbLikes, GETecbLikes);
+        }
+
+        function GETscbLikes(UserLikes) {
+            User.UserLikes = UserLikes;
+            localStorage.setItem('User', JSON.stringify(User));
+        }
+        function GETecbLikes(status) {
+            console.log(status);
+        }
+
+        function initMap() {
+
+            var options = {
+                center: { lat: 52.379189, lng: 4.899431 },
+                zoom: 12
+            }
+            map = new google.maps.Map(document.getElementById("map"), options);
+
+            var marker = new google.maps.Marker({
+                position: { lat: 52.379189, lng: 4.899431 },
+                icon: "https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png",
+                title: "City Center"
+            });
+
+
+            marker.setMap(map);
+
+            // To add the marker to the map, call setMap();
+        }
+      
+
+        function render_map_single_apartment(apartment) {
+
+            let marker = new google.maps.Marker({
+                position: { lat: apartment.A_c.Latitude, lng: apartment.A_c.Longitude },
+                title: parseFloat(apartment.Price).toFixed(2) + "$",
+                customInfo: apartment.Id
+
+            });
+            marker.addListener('click', function () {
+
+                getDetails(this.customInfo);
+
+            });
+            markersArray.push(marker);
+            //markers_dictionary[apartment.Id].push(marker);
+            marker.setMap(map);
+        }
+        function clearOverlays() {
+            for (var i = 0; i < markersArray.length; i++) {
+                markersArray[i].setMap(null);
+            }
+            markersArray.length = 0;
+        }
+        function start_render() {
+            render_Slide();
+            call_next_ten();
+        }
+        function render_Slide() {
+            $("#filter-show").click(function () {
+                $("#bodydiv").addClass("make-gray");
+                $("#bodydiv").css('filter', 'blur(3px) grayscale(50%)');
+                $("#flip").slideToggle();
+            });
+            $("#submit-filter").click(function () {
+                
+                $("#flip").slideToggle();
+                $("#bodydiv").removeClass("make-gray");
+                $("#bodydiv").css('filter', 'blur(0px) grayscale(0%)');
+                submitForm();
+            });
+        }
+        
+        function submitForm() {
+            bool_filter = true;
+            clearOverlays();
+            radioValue = $("input[name='rate']:checked").val();
+            if (typeof radioValue === "undefined") {
+                radioValue = 5;
+            }
+
+            var price_string = $('#price-slider').text();
+            var p_words = price_string.replace(/[$ ]/g, '');
+            arr_min_price = p_words.split("-");
+            min_price = arr_min_price[0];
+            max_price = arr_min_price[1];
+            
+
+            var distance_string = $("#des-slider").text();
+
+            var d_words = distance_string.replace(/[ ]/g, '');
+            d_words = distance_string.split("-");
+            arr_min_destance = d_words[0];
+            arr_max_destance = d_words[1];
+            min_dist = parseFloat(arr_min_destance);
+            max_dist = parseFloat(arr_max_destance);
+            entire_place = "Entire home/apt";
+            shared_room = "Shared room";
+            private_room = "Private room";
+            if (!($("#cbx").is(":checked"))) {
+                entire_place = "undefind";
+            }
+            if (!($("#cbx1").is(":checked"))) {
+                private_room ="undefind" ;
+            }
+            if (!($("#cbx2").is(":checked"))) {
+                shared_room = "undefind";
+            }
+
+            for (let i in All_Apartments) {
+                filter(All_Apartments[i]);
+            }
+            check_for_more();
+
+        }
+     
+        function filter(apartmnent_filter) {
+            let ap_price = apartmnent_filter.Price.split("$");
+            let money = parseInt(ap_price[0]);
+            console.log(radioValue);
+            if (money < parseInt(min_price) || money > parseInt(max_price)) {
+                filter_handler(apartmnent_filter);
+                return;
+            }
+            else if (apartmnent_filter.A_c.Center_distance < min_dist || apartmnent_filter.A_c.Center_distance > max_dist) {
+                filter_handler(apartmnent_filter);
+                return;
+            }
+            else if (Math.round(apartmnent_filter.Reviews.Review_scores_rating) > parseFloat(radioValue)) {
+                filter_handler(apartmnent_filter);
+                return;
+            } else if ((apartmnent_filter.Room_type != entire_place) && (apartmnent_filter.Room_type != private_room) && (apartmnent_filter.Room_type != shared_room)) {
+                filter_handler(apartmnent_filter);
+                return;
+            }
+            else {
+                render_map_single_apartment(apartmnent_filter);
+                reder_ap(apartmnent_filter);
+            }
+        }
+        function filter_handler(apartmnent_filter) {
+            $("#" + apartmnent_filter.Id).css('display', 'none');
+            if (All_rendered_apartments[apartmnent_filter.Id] !== undefined) {
+                All_rendered_apartments[apartmnent_filter.Id] = false;
+            }
+        }
+        function AllApartmentsScb(all_apartments) {
+            All_Apartments = [...All_Apartments, ...all_apartments];
+            for (let i in all_apartments) {
+                if (bool_filter) { filter(all_apartments[i]); } else {
+                    reder_ap(all_apartments[i]);
+                    render_map_single_apartment(all_apartments[i]);
+                }
+
+            }
+            call = false;
+            check_for_more();
+        }
+        function check_for_more() {
+            var sum = 0;
+            for (let key in All_rendered_apartments) {
+                if (All_rendered_apartments[key] == true) {
+                    sum++;
+                    if (sum >= 6) { return;}
+                }
+
+            }
+            if ((sum < 6) && (skip < 100)) {
+                call_next_ten();
+            }
+        }
+        function add_hover(div, ap) {
+            div.hover(
+                function () {
+                    $(this).css("background-color", 'honeydew');
+                    if (jumping_arr.length != 0) {
+                        for (let j in jumping_arr) {
+                            jumping_arr[j].setAnimation(null);
+                        }
+                    }
+                    for (let i in markersArray) {
+                        if (markersArray[i].customInfo == ap.Id) {
+                            jumping_arr.push(markersArray[i]);
+                            markersArray[i].setAnimation(google.maps.Animation.BOUNCE);
+                            return;
+                        }
+                    }
+
+                },
+                function () {
+                    $(this).css("background-color", "#F0F8FF");
+                    for (let i in markersArray) {
+                        if (markersArray[i].customInfo == ap.Id) {
+                            markersArray[i].setAnimation(null);
+                            return;
+                        }
+                    }
+                }
+            )
+        }
+        function reder_ap(ap) {
+            if (All_rendered_apartments[ap.Id] === undefined) {
+                All_rendered_apartments[ap.Id] = true;
+            } else {
+                if ($("#" + ap.Id).length != 0) {
+                    $("#" + ap.Id).css('display', 'block');
+                    return;
+                }
+            }
+            let div = $("<div>");
+            div.css('cursor', 'pointer')
+            div.css('border-radius', "8px");
+            div.css("width", "250px");
+            div.css("float", "left");
+            div.css("margin-left", "10px");
+            div.css("height", "280px");
+            add_hover(div, ap);
+            div.prop('id', ap.Id);
+            let divImg = $("<div>");
+            let apartmentImg = document.createElement("img");
+            apartmentImg.src = ap.Picture_url;
+            apartmentImg.style.height = '180px';
+            apartmentImg.style.width = '92%';
+            apartmentImg.style.margin = '8px';
+            apartmentImg.style.borderRadius = '8px';
+            divImg.append(apartmentImg);
+            let newLink = $("<a>");
+            newLink.css('position', 'relative');
+            newLink.css('overflow', 'hidden');
+            newLink.css('left', '10px');
+            newLink.css('bottom', '180px');
+            newLink.css('font-size', '30px');
+            if (User != null) {
+
+                newLink.show();
+                newLink.click(function (e) {
+
+                    let userEmail = User.Email;
+                    ap_id = ap.Id;
+                    heart_id = "heart_" + ap.Id;
+                    if ($('#' + ap.Id).data("color") == "transparent") {
+                        let url = `../api/Apartments/${ap.Id}/${userEmail}/Like`;
+                        ajaxCall("PUT", url, "", scbLike, ecbLike);
+                    }
+                    else {
+                        let url = `../api/Apartments/${ap.Id}/${userEmail}/UnLike`;
+                        ajaxCall("PUT", url, "", scbUnLike, ecbUnLike);
+                    }
+
+                    if (!e) var e = window.event;
+                    e.cancelBubble = true;
+                    if (e.stopPropagation) e.stopPropagation();
+
+                });
+
+
+                if (User.UserLikes == null) {
+                    div.data("color", "transparent");
+                    newLink.append("<span ' id='heart_" + ap.Id + "'>&#129293;</span>");
+                } else {
+                    if (User.UserLikes.hasOwnProperty(ap.Id)) {
+                        div.data("color", "red");
+                        newLink.append("<span ' id='heart_" + ap.Id + "'>&#10084;&#65039;</span>");
+
+                    } else {
+                        div.data("color", "transparent");
+                        newLink.append("<span ' id='heart_" + ap.Id + "'>&#129293;</span>");
+
+                    }
+                }
+            } else {
+                newLink.append("&#129293;");
+                newLink.click(function (e) {
+
+                    
+                    window.location.href = "login.html";
+                    if (!e) var e = window.event;
+                    e.cancelBubble = true;
+                    if (e.stopPropagation) e.stopPropagation();
+
+                });
+                
+            }
+            divImg.append(newLink);
+            div.append(divImg);
+            let div2 = $("<div>");
+            let divRelative = $("<div>");
+            divRelative.css('position', 'relative');
+            divRelative.css('bottom', '55px');
+            let h2_name = $("<h6>");
+            let h4_price = $("<p>");
+            let h6_capacity = $("<p>");
+            let h6_Ratted = $("<p>");
+            let detailesBtn = $('<button>');
+            
+            detailesBtn.text("View details -->");
+            detailesBtn.attr('id', ap.Id);
+            detailesBtn.addClass("btn roberto-btn w-100");
+            detailesBtn.addClass("btn view - detail - btn");
+            div.attr('onclick', 'getDetails(' + ap.Id + ')');
+            h2_name.text(ap.Name);
+            h4_price.text("Price Per Night: " + parseFloat(ap.Price).toFixed(2) + "$");
+            h6_capacity.text("Max Guests: " + ap.Accomodates);
+            h6_Ratted.text("Rating: " + (Math.round(ap.Reviews.Review_scores_rating * 100) / 100).toFixed(2));
+            h6_capacity.css('float', 'left');
+            h6_Ratted.css('float', 'left');
+            h6_Ratted.css('left', '100px');
+            h6_Ratted.addClass('rating-margin');
+            div2.css('margin-top', '5px');
+            divRelative.append(h2_name);
+            divRelative.append(h4_price);
+            if (ap.Host.Host_is_superHost) {
+                let p_sh = $("<p>");
+                p_sh.text("Super Host");
+                p_sh.css("background-color", "white");
+                h4_price.css("float", "left");
+                p_sh.css("float", "left");
+                p_sh.css("margin-left", "30px");
+                p_sh.css("font-weight", "bold");
+                p_sh.css("color", "#00CC99");
+                divRelative.append(p_sh);
+            }
+            divRelative.append(h6_capacity);
+            divRelative.append(h6_Ratted);
+            div2.append(divRelative);
+            detailesBtn.css('width', '70px');
+            div2.css("margin-left", "10px");
+            div.append(div2);
+            div.css("background-color", "#F0F8FF");
+            div.css('visibility', 'visible');
+            div.css("margin-bottom", "20px");
+            $("#apartmentsDiv").append(div);
+
+        }
+
+        function scbLike(status) {
+            $('#' + heart_id).html("&#10084;&#65039;");
+            $('#' + ap_id).data("color", "red");
+        }
+        function ecbLike(status) {
+            console.log(status);
+        }
+        function scbUnLike(status) {
+            $('#' + heart_id).html("&#129293;");
+            $('#' + ap_id).data("color", "transparent");
+
+        }
+        function ecbUnLike(status) {
+            console.log(status);
+        }
+
+        function getDetails(id) {
+            Id = id;
+            let url = `../api/Apartments/${id}`;
+            ajaxCall("GET", url, "", apartmentByIdScb, apartmentByIdEcb);
+
+        }
+        function resarvationByIdScb(resarvation_list) {
+            Apartment.Resavations_list = resarvation_list;
+            Apartment.IsFinish = 0;
+            localStorage.setItem('apartment', JSON.stringify(Apartment));
+            window.location.href = "single-room.html";
+        }
+        function resarvationByIdEcb(status) {
+            console.log(status);
+
+        }
+        function apartmentByIdScb(apartment) {
+            Apartment = apartment;
+            let url2 = `../api/Resarvations/${Id}`;
+            ajaxCall("GET", url2, "", resarvationByIdScb, resarvationByIdEcb);
+
+        }
+        function apartmentByIdEcb(apartment) {
+            console.log("error");
+        }
+
+        function AllApartmentEcb(all_apartments) {
+            console.log("404 error");
+        }
+
+
+
+    </script>
+
+</head>
+
+<body>
+    <div id="preloader">
+        <div class="loader"></div>
+    </div>
+    <div id="bodydiv">
+    <header class="header-area">
+        <!-- Top Header Area Start -->
+        <div class="top-header-area">
+            <div class="container">
+                <div class="row">
+
+                    <div class="col-8">
+                        <div class="top-header-content">
+                            <a href="#"><i class="icon_phone"></i> <span>052-5539426</span></a>
+                            <a href="#"><i class="icon_mail"></i> <span>Mikieluz@gmail.com</span></a>
+                            <a href="#" id="user_pos"><span>Welcome Guest</span></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Top Header Area End -->
+        <!-- Main Header Start -->
+        <div id="navbar" class="main-header-area">
+            <div class="classy-nav-container breakpoint-off">
+                <div class="container">
+                    <!-- Classy Menu -->
+                    <nav class="classy-navbar justify-content-between" id="robertoNav">
+
+                        <!-- Logo -->
+                        <a class="logo" href="index.html"><img src="img/logo.jpg" style="height:75px;width:110px; border-radius:20px ;margin-top:12px;" /></a>
+
+                        <div class="classy-menu">
+                            <!-- Menu Close Button -->
+                            <!-- Nav Start -->
+                            <div class="classynav" style="float:left">
+                                <ul id="nav">
+                                    <li class="active"><a href="./index.html">Home</a></li>
+                                    <li id="apartmentsPages">
+                                        <a href="./apartments.html">Apartments</a>
+                                        <ul class="dropdown">
+                                            <li><a href="./cart.html">- My Resarvations</a></li>
+                                            <li><a href="./Favorites.html">-My Favorites</a></li>
+                                        </ul>
+                                    </li>
+                                    <li><a href="./map.html">Map</a></li>
+                                    <li><a href="./about.html">About Us</a></li>
+
+                                </ul>
+
+                                <!-- Book Now -->
+                                <div class="book-now-btn ml-3 ml-lg-5">
+                                    <ul>
+                                        <li>
+                                            <a id="login" href="login.html">Login\Sign Up<i class="fa fa-long-arrow-right" aria-hidden="true"></i></a>
+                                        </li>
+                                        <li>  <a id="SignOut" href="./apartments.html">Sign Out<i class="fa fa-long-arrow-right" aria-hidden="true"></i></a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <!-- Nav End -->
+                        </div>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </header>
+    <!-- Header Area End -->
+    <!-- Breadcrumb Area Start -->
+
+    <div class="breadcrumb-area bg-img bg-overlay jarallax" style="background-image: url(img/bg-img/57.jpg);">
+        <div class="container h-100">
+            <div class="row h-100 align-items-center">
+                <div class="col-12">
+                    <div class="breadcrumb-content text-center">
+                        <h2 class="page-title">Apartments</h2>
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb justify-content-center">
+                                <li class="breadcrumb-item"><a href="index.html">Home</a></li>
+                                <li class="breadcrumb-item active" aria-current="page">Apartments</li>
+                            </ol>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Breadcrumb Area End -->
+    <!-- Rooms Area Start -->
+    <!--<button id="inner_search" class="btn roberto-btn w-100">Check Available</button>-->
+    <div class="container" style="margin-top:20px;">
+        <div class="row">
+            <div style="height:600px;" class="col-12 col-lg-6">
+                <!-- Google Maps -->
+                <!--class="google-maps"-->
+                <button id="filter-show">Filter</button>
+                <div id="map" class="google-maps">
+                </div>
+
+            </div>
+            <div style="height:600px;" class="col-12 col-lg-6">
+                <div class="hotel-reservation--area mb-100">
+
+                    <div style="height: 600px; overflow-y: scroll;" id="apartmentsDiv"></div>
+
+                </div>
+            </div>
+
+
+        </div>
+    </div>
+    <!--<div class="roberto-rooms-area section-padding-100-0">-->
+    <!---->
+    <!--</div>-->
+    <!-- Rooms Area End -->
+    <div id="chat_box" class="chat_box">
+        <div class="chat-box-header">Send Message To Admin</div>
+        <div class="ch">
+            <ul id="history">
+            </ul>
+
+        </div><!-- HTML !-->
+
+        <div id="inputs" >
+            <input id="send_message" class="button-33" type="button"  value="Send">
+            <input placeholder="Type a message..." id="text_box" type="text" class="form-control">
+        </div>
+    </div>
+
+    <!-- Footer Area Start -->
+    <footer style="position: fixed;" id="chat_footer">
+        <!-- Copywrite Area -->
+
+        <div id="admin_chat" style=" height: 100%; text-align: center; ">
+            <a href="#" style="font-weight:bold">Chat With Admin</a>
+            <p id="notification" ></p>
+        </div>
+    </footer>
+    </div>
+    <div id="flip">
+        <div class="filter-header">Filters</div>
+        <div id="filter-container">
+            <div class="filter-section">
+                <h4>Price range</h4>
+                <p>Per night</p>
+                <div class="slider-range" style="margin-top:40px" id="price-range">
+
+                    <div id="low" data-min="0" data-max="1000" data-unit="$" class="slider-range-price ui-slider ui-slider-horizontal ui-widget ui-widget-content ui-corner-all price-slider" data-value-min="0" data-value-max="1000" data-label-result="">
+                        <div class="ui-slider-range ui-widget-header ui-corner-all"></div>
+                        <span  class="ui-slider-handle ui-state-default ui-corner-all" tabindex="0"></span>
+                        <span id="high" class="ui-slider-handle ui-state-default ui-corner-all" tabindex="0"></span>
+                    </div>
+                    <div id="price-slider" style="margin-top:10px; margin-bottom:50px" class="range-price price-slider">$0 - $1000</div>
+                </div>
+            </div>
+            <div class="filter-section">
+                <h4>Distance from city center</h4>
+                <p>Represented by meters</p>
+                <div class="slider-range" style="margin-top:40px" id="price-range">
+                    <div data-min="0" data-max="10000" data-unit="" class="slider-range-price ui-slider ui-slider-horizontal ui-widget ui-widget-content ui-corner-all price-slider" data-value-min="0" data-value-max="10000" data-label-result="">
+                        <div style="background-color:grey;color:gray" class="ui-slider-range ui-widget-header ui-corner-all"></div>
+                        <span class="ui-slider-handle ui-state-default ui-corner-all" tabindex="0"></span>
+                        <span class="ui-slider-handle ui-state-default ui-corner-all" tabindex="0"></span>
+
+                    </div>
+                    <div id="des-slider"style="margin-top:10px; margin-bottom:50px" class="range-price price-slider">0 - 10000</div>
+
+                </div>
+            </div>
+            <div class="filter-section">
+                <h4>Maximum rating</h4>
+                <div style=" margin-left: 195px; padding-top: 35px; margin-bottom: 60px;" class="range-price price-slider">
+                    <div style="font-size: 19px;  text-align: center; " class="rate">
+                        <input type="radio" id="star5" name="rate" value="5" checked/>
+                        <label for="star5" title="text">5 stars</label>
+                        <input type="radio" id="star4" name="rate" value="4" />
+                        <label for="star4" title="text">4 stars</label>
+                        <input type="radio" id="star3" name="rate" value="3" />
+                        <label for="star3" title="text">3 stars</label>
+                        <input type="radio" id="star2" name="rate" value="2" />
+                        <label for="star2" title="text">2 stars</label>
+                        <input type="radio" id="star1" name="rate" value="1" />
+                        <label for="star1" title="text">1 star</label>
+                    </div>
+                </div>
+            </div>
+            <div class="filter-section">
+                <h4>Type of place</h4>
+                <div class="rbDiv">
+                    <div class="row rb">
+                        <div class="col-6">
+                            <input class="inp-cbx" id="cbx" type="checkbox" style="display: none" checked/>
+                            <label class="cbx" for="cbx">
+                                <span>
+                                    <svg width="12px" height="10px" viewbox="0 0 12 10">
+                                        <polyline points="1.5 6 4.5 9 10.5 1"></polyline>
+                                    </svg>
+                                </span><span class="span-font-size">Entire place</span>
+                            </label>
+                        </div>
+                        <div class="col-6">
+                            <input class="inp-cbx1" id="cbx1" type="checkbox" style="display: none" checked />
+                            <label class="cbx1" for="cbx1">
+                                <span>
+                                    <svg width="12px" height="10px" viewbox="0 0 12 10">
+                                        <polyline points="1.5 6 4.5 9 10.5 1"></polyline>
+                                    </svg>
+                                </span><span class="span-font-size">Private room</span>
+                            </label>
+
+                        </div>
+
+                    </div>
+                    <div class="row rb">
+                        <div class="col-6">
+                            <input class="inp-cbx2" id="cbx2" type="checkbox" style="display: none" checked/>
+                            <label class="cbx2" for="cbx2">
+                                <span>
+                                    <svg width="12px" height="10px" viewbox="0 0 12 10">
+                                        <polyline points="1.5 6 4.5 9 10.5 1"></polyline>
+                                    </svg>
+                                </span><span class="span-font-size">Shared room</span>
+                            </label>
+                        </div>
+                        <div class="col-6"></div>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <!--<a id="clear-filter">Clear all</a>-->
+        <button id="submit-filter">Done</button>
+
+    </div>
+    <!-- Footer Area End -->
+    <!--firebase libaryes-->
+    <script src="https://www.gstatic.com/firebasejs/7.14.6/firebase-app.js"></script>
+
+    <!-- TODO: Add SDKs for Firebase products that you want to use
+         https://firebase.google.com/docs/web/setup#available-libraries -->
+
+    <script src="https://www.gstatic.com/firebasejs/7.14.6/firebase-auth.js"></script>
+
+    <!--**** Remember to add the database script ***-->
+    <script src="https://www.gstatic.com/firebasejs/7.14.6/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.14.6/firebase-analytics.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.14.6/firebase-database.js"></script>
+    <script src="fb_config.js"></script>
+
+    <!--Your web app's Firebase configuration-->
+    <script>
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        firebase.analytics();
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+    </script>
+
+    <!-- **** All JS Files ***** -->
+    <!-- jQuery 2.2.4 -->
+    <script src="js/jquery.min.js"></script>
+    <!-- Popper -->
+    <script src="js/popper.min.js"></script>
+    <!-- Bootstrap -->
+    <script src="js/bootstrap.min.js"></script>
+    <!-- All Plugins -->
+    <script src="js/roberto.bundle.js"></script>
+    <!-- Active -->
+    <script src="js/default-assets/active.js"></script>
+    <script async
+            src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBM8EdF6xKVf6AFUeL30ScYKKGRyW1hNZQ&callback=initMap"></script>
+</body>
+
+</html>
